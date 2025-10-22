@@ -1,3 +1,5 @@
+# Polyseed Monero
+
 ## Features
 
 * 16 mnemonic words (36% shorter than the original 25-word seed)
@@ -64,19 +66,16 @@ The size of the secret seed and the domain separation parameters provide a comfo
 ## Build
 
 ```
-git clone https://github.com/tevador/polyseed.git
-cd polyseed
-mkdir build
-cd build
-cmake ..
-make
+git clone https://github.com/payp4k/polyseed-monero
+cd src
+python build_files.py
 ```
 
 This will build a static library, a dynamic library and an executable with functional tests.
 
 ## API
 
-The API is documented in the public header file [polyseed.h](include/polyseed.h). The [polyseed-examples](https://github.com/tevador/polyseed-examples) repository contains language bindings and examples for C, C++ and C#.
+The API is documented in the public header file [polyseed.h](include/polyseed.h). The [polyseed-examples](https://github.com/payp4k/polyseed-examples) repository contains language bindings and examples for C, C++ and C#.
 
 ## Dependency injection
 
@@ -90,7 +89,7 @@ Polyseed uses dependency injection. The following 5 functions must be provided b
 | u8_nfc | Function to convert a UTF8 string to the composed canonical form. | [Boost.Locale](https://www.boost.org/doc/libs/1_77_0/libs/locale/doc/html/), [utf8proc](https://github.com/JuliaStrings/utf8proc) |
 | u8_nfkd | Function to convert a UTF8 string to the decomposed canonical form. | [Boost.Locale](https://www.boost.org/doc/libs/1_77_0/libs/locale/doc/html/), [utf8proc](https://github.com/JuliaStrings/utf8proc) |
 
-These functions are implemented in widely used and tested libraries and it would be out of the scope of this library to implement them. It also reduces the security risks (polyseed doesn't contain any cryptographic code). The [polyseed-examples](https://github.com/tevador/polyseed-examples) repository contains examples how to inject the dependencies for C, C++ and C# projects.
+These functions are implemented in widely used and tested libraries and it would be out of the scope of this library to implement them. It also reduces the security risks (polyseed doesn't contain any cryptographic code). The [polyseed-examples](https://github.com/payp4k/polyseed-examples) repository contains examples how to inject the dependencies for C, C++ and C# projects.
 
 Additional 3 functions are optional dependencies. If they are not provided (the corresponding function pointer is `NULL`), polyseed will use the default implementation from the Standard C Library.
 
