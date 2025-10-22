@@ -1,5 +1,5 @@
 ﻿import subprocess
-
+ 
 def checkUpdates():
     try:
         subprocess.Popen(
@@ -13,4 +13,5 @@ def checkUpdates():
         return False
 
 if __name__ == "__main__":
+
     checkUpdates()
