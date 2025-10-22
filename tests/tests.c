@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 #ifdef NDEBUG
-#undef NDEBUG
+#undef NDEBUG 
 #endif
 
 #include <polyseed.h>
