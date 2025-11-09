@@ -21,7 +21,8 @@ src/lang_pt.c
 src/lang_zh_s.c
 src/lang_zh_t.c
 src/polyseed.c
-src/storage.c)
+src/storage.c
+src/build_wrapper.c)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
