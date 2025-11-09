@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2021 tevador <tevador@gmail.com> */
+/* Copyright (c) 2020-2021 tevador <tevador@gmail.com> */ 
 /* See LICENSE for licensing information */
 
 #include "polyseed.h"
